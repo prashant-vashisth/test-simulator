@@ -1,5 +1,29 @@
 services:
-  # ── Frontend Static Site (FREE on Render — static sites have no plan cost) ───
+  # ── Backend API ───────────────────────────────────────────────────────────────
+  # Plan is selected in the Render dashboard (choose Free).
+  # Add an UptimeRobot HTTP monitor → <your-url>/health every 5 min to prevent sleep.
+  - type: web
+    name: test-simulator-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+    healthCheckPath: /health
+
+  # ── Frontend Static Site (always free on Render, no plan needed) ──────────────
   - type: web
     name: test-simulator-frontend
     runtime: static
@@ -8,7 +32,7 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_BASE_URL
-        sync: false          # Set to your Koyeb backend URL after deploying backend
+        sync: false
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
@@ -24,7 +48,3 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
-
-# NOTE: The backend API is deployed separately on Koyeb (free tier).
-# Render removed free web service plans in 2024.
-# See README.md → Hosting section for Koyeb setup instructions.

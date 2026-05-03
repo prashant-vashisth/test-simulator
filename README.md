@@ -124,13 +124,11 @@ Re-running load is safe – existing questions (matched by topic + question text
 | Service | Role | Free Tier |
 |---|---|---|
 | **Supabase** | PostgreSQL database | 500 MB storage, 2 GB bandwidth/month |
-| **Koyeb.com** | Backend API | 2 services, 512 MB RAM, **no sleep**, no credit card |
-| **Render.com** | Frontend static site | Unlimited bandwidth, always on |
+| **Render.com** | Backend API + Frontend | Free web service + free static site |
+| **UptimeRobot** | Keeps backend awake | Free, pings every 5 min (50 monitors) |
 | **GitHub** | Source code + CI/CD | Free |
 
-> **Why not Render for the backend?**  
-> Render removed their free web service tier in 2024. Static sites remain free.  
-> Koyeb's free tier has no inactivity sleep (unlike Render's old free tier), making it better for this use case.
+> **render.yaml** intentionally omits `plan:` for the backend — Render's Blueprint rejects the string `"free"` but will let you pick the Free plan in the dashboard during setup.
 
 ---
 
@@ -139,57 +137,60 @@ Re-running load is safe – existing questions (matched by topic + question text
 #### 1. Database — Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Go to **SQL Editor** and run:
-   - Paste and run `database/schema.sql`
-   - Paste and run `database/seed_data.sql`
+2. Go to **SQL Editor** and run (in order):
+   - `database/schema.sql`
+   - `database/seed_data.sql`
 3. Note down from **Settings → Database**:
-   - **Connection string** (URI) — replace `postgresql://` with `postgresql+asyncpg://` for the backend
+   - **Connection string (URI)** — change `postgresql://` to `postgresql+asyncpg://`
 4. Note down from **Settings → API**:
-   - **Service Role Key** (secret — backend only)
+   - **Service Role Key** (backend only, keep secret)
    - **Anon public key** (frontend)
 
-#### 2. Backend API — Koyeb
+#### 2. Push to GitHub
 
-1. Sign up at [koyeb.com](https://koyeb.com) (free, no credit card).
-2. Click **Create App → GitHub**.
-3. Select your `test-simulator` repo.
-4. Set these build options:
-   - **Service type**: Web Service
-   - **Build type**: Dockerfile
-   - **Dockerfile path**: `backend/Dockerfile`
-   - **Port**: `8000`
-5. Add environment variables:
-   ```
-   DATABASE_URL       = postgresql+asyncpg://postgres:<password>@db.<project>.supabase.co:5432/postgres
-   SUPABASE_URL       = https://<project>.supabase.co
-   SUPABASE_SERVICE_ROLE_KEY = <your-service-role-key>
-   SECRET_KEY         = <any-long-random-string>
-   ALLOWED_ORIGINS    = https://test-simulator-frontend.onrender.com
-   ENVIRONMENT        = production
-   ```
-6. Deploy. Note your Koyeb app URL (e.g. `https://test-simulator-api-xxxx.koyeb.app`).
-
-#### 3. Frontend — Render Static Site
-
-1. Push your repo to GitHub if you haven't already.
-2. Go to [render.com](https://render.com) → **New → Blueprint**.
-3. Connect your GitHub repo — Render reads `render.yaml` and creates the frontend static site.
-4. Set environment variables in the Render dashboard:
-   ```
-   VITE_API_BASE_URL      = https://test-simulator-api-xxxx.koyeb.app
-   VITE_SUPABASE_URL      = https://<project>.supabase.co
-   VITE_SUPABASE_ANON_KEY = <your-anon-key>
-   ```
-5. Trigger a redeploy. Your frontend will be live at `https://test-simulator-frontend.onrender.com`.
-
-#### 4. Update CORS on the backend
-
-Once the frontend URL is known, update `ALLOWED_ORIGINS` on Koyeb to match exactly:
-```
-ALLOWED_ORIGINS = https://test-simulator-frontend.onrender.com
+```bash
+git remote add origin https://github.com/<your-username>/test-simulator.git
+git push -u origin main
 ```
 
----
+#### 3. Deploy on Render (both services)
+
+1. Go to [render.com](https://render.com) → **New → Blueprint**.
+2. Connect your GitHub repo — Render reads `render.yaml` and shows both services.
+3. For the **backend** service, when prompted to choose a plan, select **Free**.
+4. Set environment variables for both services:
+
+**Backend** (`test-simulator-api`):
+```
+DATABASE_URL              = postgresql+asyncpg://postgres:<pw>@db.<project-id>.supabase.co:5432/postgres
+SUPABASE_URL              = https://<project-id>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY = <service-role-key>
+ALLOWED_ORIGINS           = https://test-simulator-frontend.onrender.com
+ENVIRONMENT               = production
+```
+
+**Frontend** (`test-simulator-frontend`):
+```
+VITE_API_BASE_URL      = https://test-simulator-api.onrender.com
+VITE_SUPABASE_URL      = https://<project-id>.supabase.co
+VITE_SUPABASE_ANON_KEY = <anon-key>
+```
+
+5. Click **Apply** — both services deploy automatically.
+
+#### 4. Keep backend alive with UptimeRobot
+
+Render's free web services sleep after 15 minutes of inactivity. UptimeRobot pings them awake:
+
+1. Log in to [uptimerobot.com](https://uptimerobot.com).
+2. Click **Add New Monitor**:
+   - **Monitor Type**: HTTP(s)
+   - **Friendly Name**: Test Simulator API
+   - **URL**: `https://test-simulator-api.onrender.com/health`
+   - **Monitoring Interval**: 5 minutes
+3. Click **Create Monitor** — done.
+
+The `/health` endpoint returns `{"status": "ok"}` instantly, costs no DB call, and keeps the service warm.
 
 ---
 
