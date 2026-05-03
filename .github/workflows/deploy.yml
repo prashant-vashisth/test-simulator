@@ -49,16 +49,16 @@ jobs:
           VITE_SUPABASE_URL: "https://placeholder.supabase.co"
           VITE_SUPABASE_ANON_KEY: "placeholder"
 
-  # ── Trigger Render deploy (on main push only) ─────────────────────────────────
+  # ── Trigger deploys on main push ─────────────────────────────────────────────
   deploy:
-    name: Deploy to Render
+    name: Deploy
     needs: [backend, frontend]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Render backend deploy
-        if: vars.RENDER_BACKEND_HOOK != ''
-        run: curl -s -o /dev/null "${{ vars.RENDER_BACKEND_HOOK }}"
-      - name: Trigger Render frontend deploy
+      # Koyeb auto-deploys from GitHub pushes — no webhook needed.
+      # Render static site auto-deploys from GitHub pushes — no webhook needed.
+      # Add manual webhook triggers below if you disable auto-deploy in the dashboards.
+      - name: Trigger Render frontend deploy (optional manual hook)
         if: vars.RENDER_FRONTEND_HOOK != ''
         run: curl -s -o /dev/null "${{ vars.RENDER_FRONTEND_HOOK }}"

@@ -119,30 +119,77 @@ Re-running load is safe – existing questions (matched by topic + question text
 
 ---
 
-## Hosting (Free Tier)
+## Hosting (100% Free Forever)
 
 | Service | Role | Free Tier |
 |---|---|---|
-| **Supabase** | PostgreSQL database | 500 MB, 50 MB transfer/month |
-| **Render.com** | Backend API (web service) | 750 hrs/month, sleeps after 15 min idle |
-| **Render.com** | Frontend (static site) | Unlimited |
+| **Supabase** | PostgreSQL database | 500 MB storage, 2 GB bandwidth/month |
+| **Koyeb.com** | Backend API | 2 services, 512 MB RAM, **no sleep**, no credit card |
+| **Render.com** | Frontend static site | Unlimited bandwidth, always on |
 | **GitHub** | Source code + CI/CD | Free |
 
-### Deploy to Render
+> **Why not Render for the backend?**  
+> Render removed their free web service tier in 2024. Static sites remain free.  
+> Koyeb's free tier has no inactivity sleep (unlike Render's old free tier), making it better for this use case.
 
-1. Push this repo to GitHub.
-2. On [render.com](https://render.com), click **New → Blueprint** and connect your GitHub repo.  
-   Render will detect `render.yaml` and create both services automatically.
-3. Set environment variables in Render dashboard (see `.env.example`).
-4. For automatic deploys: add your Render deploy hook URLs as GitHub repository variables  
-   `RENDER_BACKEND_HOOK` and `RENDER_FRONTEND_HOOK`.
+---
 
-### Supabase Setup
+### Step-by-step Deployment
 
-1. Create a new project at [supabase.com](https://supabase.com).
-2. Copy the **Database URL** (Settings → Database → Connection string – URI mode with **asyncpg**).
-3. Copy the **Service Role Key** (Settings → API).
-4. Run the SQL migration files in Supabase SQL Editor.
+#### 1. Database — Supabase
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. Go to **SQL Editor** and run:
+   - Paste and run `database/schema.sql`
+   - Paste and run `database/seed_data.sql`
+3. Note down from **Settings → Database**:
+   - **Connection string** (URI) — replace `postgresql://` with `postgresql+asyncpg://` for the backend
+4. Note down from **Settings → API**:
+   - **Service Role Key** (secret — backend only)
+   - **Anon public key** (frontend)
+
+#### 2. Backend API — Koyeb
+
+1. Sign up at [koyeb.com](https://koyeb.com) (free, no credit card).
+2. Click **Create App → GitHub**.
+3. Select your `test-simulator` repo.
+4. Set these build options:
+   - **Service type**: Web Service
+   - **Build type**: Dockerfile
+   - **Dockerfile path**: `backend/Dockerfile`
+   - **Port**: `8000`
+5. Add environment variables:
+   ```
+   DATABASE_URL       = postgresql+asyncpg://postgres:<password>@db.<project>.supabase.co:5432/postgres
+   SUPABASE_URL       = https://<project>.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY = <your-service-role-key>
+   SECRET_KEY         = <any-long-random-string>
+   ALLOWED_ORIGINS    = https://test-simulator-frontend.onrender.com
+   ENVIRONMENT        = production
+   ```
+6. Deploy. Note your Koyeb app URL (e.g. `https://test-simulator-api-xxxx.koyeb.app`).
+
+#### 3. Frontend — Render Static Site
+
+1. Push your repo to GitHub if you haven't already.
+2. Go to [render.com](https://render.com) → **New → Blueprint**.
+3. Connect your GitHub repo — Render reads `render.yaml` and creates the frontend static site.
+4. Set environment variables in the Render dashboard:
+   ```
+   VITE_API_BASE_URL      = https://test-simulator-api-xxxx.koyeb.app
+   VITE_SUPABASE_URL      = https://<project>.supabase.co
+   VITE_SUPABASE_ANON_KEY = <your-anon-key>
+   ```
+5. Trigger a redeploy. Your frontend will be live at `https://test-simulator-frontend.onrender.com`.
+
+#### 4. Update CORS on the backend
+
+Once the frontend URL is known, update `ALLOWED_ORIGINS` on Koyeb to match exactly:
+```
+ALLOWED_ORIGINS = https://test-simulator-frontend.onrender.com
+```
+
+---
 
 ---
 
@@ -170,7 +217,7 @@ Re-running load is safe – existing questions (matched by topic + question text
 2. Run the pipeline update or call the API:
 
 ```bash
-curl -X PATCH https://your-api.onrender.com/api/v1/children/<child-uuid> \
+curl -X PATCH https://your-app-xxxx.koyeb.app/api/v1/children/<child-uuid> \
   -H "Content-Type: application/json" \
   -d '{"avatar_url": "https://..."}'
 ```
