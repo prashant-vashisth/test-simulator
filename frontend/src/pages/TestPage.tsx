@@ -18,9 +18,9 @@ const MAX_INTERRUPTIONS = 3;
 
 export function TestPage() {
   const navigate = useNavigate();
-  const { selectedChild } = useAuthStore();
+  useAuthStore();
   const {
-    session, questions, currentIndex, answers, interruptionCount,
+    session, questions, currentIndex, answers,
     setQuestions, recordAnswer, goToNext, goToPrev, goToIndex, startQuestionTimer, incrementInterruption,
   } = useTestStore();
 
