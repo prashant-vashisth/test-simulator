@@ -166,46 +166,41 @@ export function ResultsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-50 to-indigo-50 p-4 sm:p-8">
-      <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-slate-50">
+      {/* Header bar */}
+      <header className="bg-white border-b border-slate-100 sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="font-display text-3xl font-black text-gray-900">Test Complete!</h1>
-            <p className="text-gray-500 text-sm mt-0.5">
+            <h1 className="text-base font-bold text-slate-900">Session Complete</h1>
+            <p className="text-xs text-slate-400 mt-0.5">
               {config?.testType.name} · {config?.subject.name} · {config?.grade.name}
             </p>
           </div>
-          <div className="text-right text-sm text-gray-400">
-            {new Date(result.started_at).toLocaleDateString()}
-          </div>
+          <span className="text-xs text-slate-400">
+            {new Date(result.started_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </span>
         </div>
+      </header>
 
-        {/* Score */}
+      <div className="max-w-3xl mx-auto px-6 py-8 space-y-6 pb-16">
         <ScoreSummary result={result} childName={selectedChild.name} />
-
-        {/* Topic performance + recommendations */}
         <TopicPerformancePanel performances={topicPerf} recommendations={recommendations} />
 
-        {/* Question review button */}
         <button
           onClick={() => { setShowReview(true); setReviewIndex(0); }}
-          className="w-full py-3 text-sm font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-2xl border border-brand-200 transition"
+          className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold text-brand-700 bg-white hover:bg-brand-50 rounded-xl border border-brand-200 hover:border-brand-300 transition-colors shadow-card"
         >
-          📖 Review All Questions & Answers
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          Review Questions & Answers
         </button>
 
-        {/* Attempt history */}
         <AttemptHistory sessions={sessions} />
 
-        {/* Actions */}
-        <div className="grid grid-cols-2 gap-3 pb-8">
-          <Button variant="secondary" size="lg" onClick={handleNewChild}>
-            Switch Child
-          </Button>
-          <Button size="lg" onClick={handleRetry}>
-            Try Again 🚀
-          </Button>
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="secondary" size="lg" onClick={handleNewChild}>Switch Student</Button>
+          <Button size="lg" onClick={handleRetry}>Practice Again →</Button>
         </div>
       </div>
     </div>
