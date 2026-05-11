@@ -83,8 +83,16 @@ async def require_child(
 ) -> Child:
     """Hard-require an authenticated child; raise 401 if missing."""
     if child is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+    if not child.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is disabled. Please contact support.")
+    return child
+
+
+async def require_admin(
+    child: Child = Depends(require_child),
+) -> Child:
+    """Require an authenticated admin user."""
+    if child.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return child

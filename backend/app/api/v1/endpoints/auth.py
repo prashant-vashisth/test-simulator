@@ -1,9 +1,12 @@
 import uuid
+from datetime import datetime, timezone
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+import httpx
 
+from ....core.config import get_settings
 from ....core.database import get_db
 from ....models.child import Child
 from ....schemas.child import ChildOut, ChildGradeUpdate
@@ -62,3 +65,21 @@ async def update_grade(
     await db.commit()
     await db.refresh(child)
     return child
+
+
+@router.delete("/account", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_own_account(
+    child: Child = Depends(require_child),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Soft-delete the authenticated child's account.
+    Sets is_active=False and deleted_at=now. The Supabase auth account
+    is NOT deleted so the user can be reactivated by an admin.
+    All session data is preserved.
+    """
+    child.is_active = False
+    child.deleted_at = datetime.now(timezone.utc)
+    db.add(child)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

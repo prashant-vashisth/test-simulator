@@ -11,6 +11,9 @@ import { RegisterPage } from './pages/RegisterPage';
 import { ChildLoginPage } from './pages/ChildLoginPage';
 import { EmailVerificationPage } from './pages/EmailVerificationPage';
 import { ChildDashboardPage } from './pages/ChildDashboardPage';
+import { AdminPage } from './pages/AdminPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { useKeepAlive } from './hooks/useKeepAlive';
 import type { ReactNode } from 'react';
 
@@ -60,11 +63,14 @@ function AppInner() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/child-login" element={<ChildLoginPage />} />
       <Route path="/verify-email" element={<EmailVerificationPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       {/* Supabase email confirmation redirect lands here */}
       <Route path="/auth/callback" element={<EmailVerificationPage />} />
 
       {/* ── Child self-auth routes ── */}
       <Route path="/dashboard" element={<ChildRoute><ChildDashboardPage /></ChildRoute>} />
+      <Route path="/admin" element={<ChildRoute><AdminPage /></ChildRoute>} />
 
       {/* ── Parent-managed routes ── */}
       <Route path="/select-test" element={<AuthRequired><TestSelectionPage /></AuthRequired>} />

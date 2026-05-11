@@ -55,7 +55,12 @@ export function ChildLoginPage() {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1.5">Password</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-semibold text-slate-600">Password</label>
+            <Link to="/forgot-password" className="text-xs text-brand-600 hover:text-brand-700 font-medium">
+              Forgot password?
+            </Link>
+          </div>
           <div className="relative">
             <input
               type={showPw ? 'text' : 'password'} value={password}

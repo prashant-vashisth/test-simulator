@@ -7,6 +7,12 @@ export interface Child {
   display_order: number;
   email?: string | null;
   grade_id?: string | null;
+  is_active?: boolean;
+  role?: string;
+  account_type?: string;
+  trial_expires_at?: string | null;
+  deleted_at?: string | null;
+  created_at?: string;
 }
 
 export interface TestType {
