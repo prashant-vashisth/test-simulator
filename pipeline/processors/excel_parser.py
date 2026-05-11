@@ -2,22 +2,23 @@
 Excel → validated dict list parser.
 
 Expected sheet columns (case-insensitive, order doesn't matter):
-  test_type   | nwea_map / math_olympiad / science_olympiad
-  subject     | math / reading / language / science / comp_math / algebra / …
-  grade       | K / 1 / 2 / … / 12
-  topic       | free text
-  question    | free text (may be long)
-  passage     | optional – reading comprehension context
-  type        | single / multiple  (default: single)
-  difficulty  | easy / medium / hard  (default: medium)
-  points      | integer  (default: 1)
-  explanation | optional
-  option_a    | required
-  option_b    | required
-  option_c    | optional
-  option_d    | optional
-  option_e    | optional
-  correct     | comma-separated labels, e.g. "A" or "A,C"
+  test_type       | nwea_map / math_olympiad / science_olympiad
+  subject         | math / english_reading / english_writing / reading / …
+  grade           | K / 1 / 2 / … / 12
+  topic           | free text
+  question        | free text (may be long)
+  passage         | optional – reading comprehension context
+  type            | single / multiple / open_ended  (default: single)
+  difficulty      | easy / medium / hard  (default: medium)
+  points          | integer  (default: 1)
+  explanation     | optional
+  writing_rubric  | optional – grading guidance for open_ended questions
+  option_a        | required for single/multiple
+  option_b        | required for single/multiple
+  option_c        | optional
+  option_d        | optional
+  option_e        | optional
+  correct         | comma-separated labels – not required for open_ended
 """
 
 from __future__ import annotations
@@ -29,11 +30,11 @@ from typing import Any
 import pandas as pd
 
 
-REQUIRED_COLUMNS = {"test_type", "subject", "grade", "topic", "question", "option_a", "option_b", "correct"}
+REQUIRED_COLUMNS = {"test_type", "subject", "grade", "topic", "question"}
 
 VALID_TEST_TYPES = {"nwea_map", "math_olympiad", "science_olympiad"}
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
-VALID_QUESTION_TYPES = {"single", "multiple", "single_choice", "multiple_choice"}
+VALID_QUESTION_TYPES = {"single", "multiple", "open_ended", "single_choice", "multiple_choice"}
 
 OPTION_LABELS = ["A", "B", "C", "D", "E"]
 
@@ -47,6 +48,8 @@ def _to_question_type(raw: Any) -> str:
     val = str(raw).strip().lower()
     if val in ("multiple", "multiple_choice"):
         return "multiple_choice"
+    if val == "open_ended":
+        return "open_ended"
     return "single_choice"
 
 
@@ -100,6 +103,28 @@ def parse_excel(file_path: str | Path) -> tuple[list[dict], list[str]]:
             errors.append(f"{src}: empty question text")
             continue
 
+        question_type = _to_question_type(cell("type", "single"))
+
+        if question_type == "open_ended":
+            # open_ended questions have no answer options or correct labels
+            rows.append({
+                "test_type": test_type,
+                "subject": cell("subject").lower(),
+                "grade": cell("grade").upper(),
+                "topic": cell("topic"),
+                "question_text": question_text,
+                "passage": cell("passage") or None,
+                "question_type": "open_ended",
+                "difficulty": _to_difficulty(cell("difficulty", "medium")),
+                "points": max(1, int(float(cell("points", "1") or "1"))),
+                "explanation": cell("explanation") or None,
+                "writing_rubric": cell("writing_rubric") or None,
+                "options": [],
+                "source_file": path.name,
+                "source_row": row_num,
+            })
+            continue
+
         correct_labels = _parse_correct(cell("correct"))
         if not correct_labels:
             errors.append(f"{src}: no correct answer specified")
@@ -127,10 +152,11 @@ def parse_excel(file_path: str | Path) -> tuple[list[dict], list[str]]:
             "topic": cell("topic"),
             "question_text": question_text,
             "passage": cell("passage") or None,
-            "question_type": _to_question_type(cell("type", "single")),
+            "question_type": question_type,
             "difficulty": _to_difficulty(cell("difficulty", "medium")),
             "points": max(1, int(float(cell("points", "1") or "1"))),
             "explanation": cell("explanation") or None,
+            "writing_rubric": None,
             "options": options,
             "source_file": path.name,
             "source_row": row_num,

@@ -145,23 +145,27 @@ def create_template(out: Path):
 
     headers = [
         "test_type", "subject", "grade", "topic", "question", "passage",
-        "type", "difficulty", "points", "explanation",
+        "type", "difficulty", "points", "explanation", "writing_rubric",
         "option_a", "option_b", "option_c", "option_d", "option_e", "correct",
     ]
     notes = [
         "nwea_map | math_olympiad | science_olympiad",
-        "math | reading | language | science | comp_math | …",
+        "math | english_reading | english_writing | reading | language | …",
         "K | 1 | 2 | … | 12",
         "Topic name (e.g. Fractions)",
         "Question text (can be long)",
         "Reading passage (optional)",
-        "single | multiple",
+        "single | multiple | open_ended",
         "easy | medium | hard",
         "1",
         "Explanation shown after test (optional)",
-        "Option A text", "Option B text", "Option C text (optional)",
-        "Option D text (optional)", "Option E text (optional)",
-        'Correct labels: "A" or "A,C"',
+        "Grading rubric for open_ended (optional)",
+        "Option A text (leave blank for open_ended)",
+        "Option B text (leave blank for open_ended)",
+        "Option C text (optional)",
+        "Option D text (optional)",
+        "Option E text (optional)",
+        'Correct labels: "A" or "A,C" (leave blank for open_ended)',
     ]
     sample = [
         "nwea_map", "math", "6", "Ratios & Proportional Relationships",
@@ -169,6 +173,7 @@ def create_template(out: Path):
         "",
         "single", "easy", "1",
         "Set up the proportion: 3/2 = 9/x → x = 6",
+        "",
         "4 cups", "6 cups", "8 cups", "12 cups", "", "B",
     ]
 

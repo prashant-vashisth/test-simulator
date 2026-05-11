@@ -122,22 +122,26 @@ def load_rows(
                     (topic_id, row["question_text"]),
                 )
 
+                writing_rubric = row.get("writing_rubric")
+                is_open_ended = row["question_type"] == "open_ended"
+
                 if existing:
                     q_id = existing["id"]
                     if not dry_run:
                         cur.execute(
                             """UPDATE questions SET
                                 question_type = %s, difficulty = %s, points = %s,
-                                passage = %s, explanation = %s,
+                                passage = %s, explanation = %s, writing_rubric = %s,
                                 source_file = %s, source_row = %s, updated_at = NOW()
                             WHERE id = %s""",
                             (
                                 row["question_type"], row["difficulty"], row["points"],
-                                row["passage"], row["explanation"],
+                                row["passage"], row["explanation"], writing_rubric,
                                 row["source_file"], row["source_row"], q_id,
                             ),
                         )
-                        cur.execute("DELETE FROM answer_options WHERE question_id = %s", (q_id,))
+                        if not is_open_ended:
+                            cur.execute("DELETE FROM answer_options WHERE question_id = %s", (q_id,))
                     stats["updated"] += 1
                 else:
                     q_id = uuid.uuid4()
@@ -146,18 +150,18 @@ def load_rows(
                             """INSERT INTO questions
                                 (id, topic_id, grade_id, test_type_id, question_text,
                                  passage, question_type, difficulty, points, explanation,
-                                 source_file, source_row)
-                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                                 writing_rubric, source_file, source_row)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                             (
                                 q_id, topic_id, grade_id, tt_id, row["question_text"],
                                 row["passage"], row["question_type"], row["difficulty"],
-                                row["points"], row["explanation"],
+                                row["points"], row["explanation"], writing_rubric,
                                 row["source_file"], row["source_row"],
                             ),
                         )
                     stats["inserted"] += 1
 
-                if not dry_run:
+                if not dry_run and not is_open_ended:
                     for order, opt in enumerate(row["options"]):
                         cur.execute(
                             """INSERT INTO answer_options

@@ -5,6 +5,8 @@ export interface Child {
   name: string;
   avatar_url: string | null;
   display_order: number;
+  email?: string | null;
+  grade_id?: string | null;
 }
 
 export interface TestType {
@@ -56,7 +58,8 @@ export interface Question {
   question_text: string;
   passage: string | null;
   image_url: string | null;
-  question_type: 'single_choice' | 'multiple_choice';
+  question_type: 'single_choice' | 'multiple_choice' | 'open_ended';
+  writing_rubric?: string | null;
   difficulty: 'easy' | 'medium' | 'hard';
   points: number;
   explanation?: string | null;
@@ -87,8 +90,9 @@ export interface SessionSummary extends TestSession {
 
 export interface AnswerSubmit {
   question_id: string;
-  selected_option_ids: string[];
+  selected_option_ids?: string[];
   time_taken_seconds?: number;
+  writing_response?: string;
 }
 
 export interface TopicPerformance {
@@ -120,6 +124,7 @@ export interface QuestionResult {
   question_type: string;
   difficulty: string;
   explanation: string | null;
+  writing_rubric: string | null;
   options: {
     id: string;
     label: string;
@@ -127,6 +132,8 @@ export interface QuestionResult {
     is_correct: boolean;
   }[];
   selected_option_ids: string[];
+  writing_response: string | null;
+  groq_feedback: Record<string, unknown> | null;
   is_correct: boolean | null;
   time_taken_seconds: number | null;
 }

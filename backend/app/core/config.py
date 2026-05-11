@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me"
     ALLOWED_ORIGINS: str = "http://localhost:5173"
 
+    # Supabase Auth JWT verification
+    SUPABASE_JWT_SECRET: str = ""
+
+    # Groq AI (writing feedback)
+    GROQ_API_KEY: str = ""
+
     # App
     ENVIRONMENT: str = "development"
     API_V1_PREFIX: str = "/api/v1"

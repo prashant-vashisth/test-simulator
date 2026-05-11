@@ -7,6 +7,7 @@ import { childService } from '../services/childService';
 import { ScoreSummary } from '../components/results/ScoreSummary';
 import { TopicPerformancePanel } from '../components/results/TopicPerformance';
 import { AttemptHistory } from '../components/results/AttemptHistory';
+import { WritingFeedback } from '../components/results/WritingFeedback';
 import { QuestionCard } from '../components/test/QuestionCard';
 import { Button } from '../components/common/Button';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
@@ -84,9 +85,11 @@ export function ResultsPage() {
     navigate('/');
   };
 
-  // Review mode: show question as a read-only card
+  // Review mode
   if (showReview && result.questions.length > 0) {
     const qr: QuestionResult = result.questions[reviewIndex];
+    const isWriting = qr.question_type === 'open_ended';
+
     const asQuestion = {
       id: qr.question_id,
       topic_id: '',
@@ -95,7 +98,7 @@ export function ResultsPage() {
       question_text: qr.question_text,
       passage: qr.passage,
       image_url: null,
-      question_type: qr.question_type as 'single_choice' | 'multiple_choice',
+      question_type: qr.question_type as 'single_choice' | 'multiple_choice' | 'open_ended',
       difficulty: qr.difficulty as 'easy' | 'medium' | 'hard',
       points: 1,
       explanation: qr.explanation,
@@ -119,19 +122,37 @@ export function ResultsPage() {
           </div>
 
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-4">
-            <div className="flex items-center gap-2 mb-4 text-sm font-medium">
-              {qr.is_correct
-                ? <span className="text-green-600 bg-green-50 px-2.5 py-1 rounded-full">✓ Correct</span>
-                : <span className="text-red-600 bg-red-50 px-2.5 py-1 rounded-full">✗ Incorrect</span>}
-            </div>
-            <QuestionCard
-              question={asQuestion}
-              questionNumber={reviewIndex + 1}
-              selectedOptionIds={qr.selected_option_ids}
-              isReview
-              showTTS={false}
-              onToggleOption={() => null}
-            />
+            {isWriting ? (
+              <div className="space-y-4">
+                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                  <p className="font-semibold text-indigo-800 text-sm mb-1">Writing Prompt</p>
+                  <p className="text-gray-800 text-sm leading-relaxed">{qr.question_text}</p>
+                </div>
+                {qr.writing_response && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Your Response</p>
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{qr.writing_response}</p>
+                  </div>
+                )}
+                <WritingFeedback feedback={qr.groq_feedback as Parameters<typeof WritingFeedback>[0]['feedback']} />
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-4 text-sm font-medium">
+                  {qr.is_correct
+                    ? <span className="text-green-600 bg-green-50 px-2.5 py-1 rounded-full">✓ Correct</span>
+                    : <span className="text-red-600 bg-red-50 px-2.5 py-1 rounded-full">✗ Incorrect</span>}
+                </div>
+                <QuestionCard
+                  question={asQuestion}
+                  questionNumber={reviewIndex + 1}
+                  selectedOptionIds={qr.selected_option_ids}
+                  isReview
+                  showTTS={false}
+                  onToggleOption={() => null}
+                />
+              </>
+            )}
           </div>
 
           <div className="flex items-center justify-between">

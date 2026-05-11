@@ -8,6 +8,7 @@ import { useTabVisibility } from '../hooks/useTabVisibility';
 import { useTimer } from '../hooks/useTimer';
 import { sessionService } from '../services/sessionService';
 import { QuestionCard } from '../components/test/QuestionCard';
+import { WritingEditor } from '../components/test/WritingEditor';
 import { ProgressBar } from '../components/test/ProgressBar';
 import { Timer } from '../components/test/Timer';
 import { InterruptionWarning } from '../components/test/InterruptionWarning';
@@ -74,6 +75,8 @@ export function TestPage() {
     enabled: !!session && !showInterruption,
   });
 
+  const [submittedWriting, setSubmittedWriting] = useState<Record<string, boolean>>({});
+
   const submitAnswer = useMutation({
     mutationFn: ({ questionId, optionIds, timeTaken }: { questionId: string; optionIds: string[]; timeTaken: number }) =>
       sessionService.submitAnswer(session!.id, {
@@ -81,6 +84,19 @@ export function TestPage() {
         selected_option_ids: optionIds,
         time_taken_seconds: timeTaken,
       }),
+  });
+
+  const submitWriting = useMutation({
+    mutationFn: ({ questionId, writingResponse, timeTaken }: { questionId: string; writingResponse: string; timeTaken: number }) =>
+      sessionService.submitAnswer(session!.id, {
+        question_id: questionId,
+        writing_response: writingResponse,
+        time_taken_seconds: timeTaken,
+      }),
+    onSuccess: (_data, { questionId }) => {
+      setSubmittedWriting((prev) => ({ ...prev, [questionId]: true }));
+      recordAnswer(questionId, []);
+    },
   });
 
   const completeSession = useMutation({
@@ -170,7 +186,21 @@ export function TestPage() {
 
       {/* Main content */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 max-w-2xl mx-auto w-full">
-        {currentQuestion && (
+        {currentQuestion && currentQuestion.question_type === 'open_ended' ? (
+          <WritingEditor
+            prompt={currentQuestion.question_text}
+            passage={currentQuestion.passage}
+            grade={config?.grade?.code}
+            disabled={submittedWriting[currentQuestion.id] || submitWriting.isPending}
+            onSubmit={(writingResponse) => {
+              submitWriting.mutate({
+                questionId: currentQuestion.id,
+                writingResponse,
+                timeTaken: answers[currentQuestion.id]?.timeTakenSeconds ?? 0,
+              });
+            }}
+          />
+        ) : currentQuestion ? (
           <QuestionCard
             question={currentQuestion}
             questionNumber={currentIndex + 1}
@@ -178,7 +208,7 @@ export function TestPage() {
             showTTS={showTTS}
             onToggleOption={handleToggleOption}
           />
-        )}
+        ) : null}
       </div>
 
       {/* Question nav grid (compact) */}

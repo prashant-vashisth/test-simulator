@@ -6,10 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ....core.database import get_db
 from ....models.session import TestSession, SessionAnswer
 from ....models.question import Question, AnswerOption
+from ....models.catalogue import Grade
 from ....schemas.session import SessionCreate, SessionOut, AnswerSubmit, AnswerOut
 from ....schemas.question import QuestionOut, QuestionWithAnswers
 from ....services.question_selector import select_questions
 from ....services.analytics import complete_session
+from ....services.groq_service import analyze_writing
 
 router = APIRouter()
 
@@ -127,20 +129,43 @@ async def submit_answer(
     if not answer_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not part of this session")
 
-    # Determine correctness
-    correct_option_ids = set(
-        row.id
-        for row in (
-            await db.execute(
-                select(AnswerOption)
-                .where(AnswerOption.question_id == body.question_id, AnswerOption.is_correct.is_(True))
-            )
-        ).scalars().all()
-    )
-    is_correct = set(body.selected_option_ids) == correct_option_ids
+    question = await db.get(Question, body.question_id)
+    if not question:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
 
-    answer_row.selected_option_ids = body.selected_option_ids
-    answer_row.is_correct = is_correct
+    if question.question_type == "open_ended":
+        if not body.writing_response:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="writing_response is required for open_ended questions",
+            )
+        # Fetch grade name for Groq prompt calibration
+        grade = await db.get(Grade, session.grade_id)
+        grade_level = grade.name if grade else "student"
+
+        feedback = await analyze_writing(
+            prompt=question.question_text,
+            response=body.writing_response,
+            grade_level=grade_level,
+        )
+        answer_row.writing_response = body.writing_response
+        answer_row.groq_feedback = feedback
+        answer_row.is_correct = None  # writing is not pass/fail
+        answer_row.selected_option_ids = []
+    else:
+        # Determine correctness for MCQ questions
+        correct_option_ids = set(
+            row.id
+            for row in (
+                await db.execute(
+                    select(AnswerOption)
+                    .where(AnswerOption.question_id == body.question_id, AnswerOption.is_correct.is_(True))
+                )
+            ).scalars().all()
+        )
+        answer_row.selected_option_ids = body.selected_option_ids
+        answer_row.is_correct = set(body.selected_option_ids) == correct_option_ids
+
     answer_row.time_taken_seconds = body.time_taken_seconds
     db.add(answer_row)
     await db.commit()
@@ -245,6 +270,7 @@ async def get_session_results(
             "question_type": q.question_type,
             "difficulty": q.difficulty,
             "explanation": q.explanation,
+            "writing_rubric": q.writing_rubric,
             "options": [
                 {
                     "id": str(o.id),
@@ -254,7 +280,9 @@ async def get_session_results(
                 }
                 for o in options
             ],
-            "selected_option_ids": [str(x) for x in answer.selected_option_ids],
+            "selected_option_ids": [str(x) for x in (answer.selected_option_ids or [])],
+            "writing_response": answer.writing_response,
+            "groq_feedback": answer.groq_feedback,
             "is_correct": answer.is_correct,
             "time_taken_seconds": answer.time_taken_seconds,
         })

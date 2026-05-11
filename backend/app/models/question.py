@@ -18,7 +18,7 @@ class Question(Base):
     passage: Mapped[str | None] = mapped_column(Text)
     image_url: Mapped[str | None] = mapped_column(Text)
     question_type: Mapped[str] = mapped_column(
-        SAEnum("single_choice", "multiple_choice", name="question_type_enum"),
+        SAEnum("single_choice", "multiple_choice", "open_ended", name="question_type_enum"),
         nullable=False,
         default="single_choice",
     )
@@ -29,6 +29,7 @@ class Question(Base):
     )
     points: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
     explanation: Mapped[str | None] = mapped_column(Text)
+    writing_rubric: Mapped[str | None] = mapped_column(Text)
     source_file: Mapped[str | None] = mapped_column(String(200))
     source_row: Mapped[int | None] = mapped_column(Integer)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

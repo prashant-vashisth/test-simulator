@@ -1,9 +1,9 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import SmallInteger, Integer, Numeric, Boolean, ForeignKey, DateTime, func
+from sqlalchemy import SmallInteger, Integer, Numeric, Boolean, ForeignKey, DateTime, Text, func
 from sqlalchemy import Enum as SAEnum, ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from ..core.database import Base
 
 
@@ -40,9 +40,11 @@ class SessionAnswer(Base):
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("test_sessions.id", ondelete="CASCADE"), nullable=False)
     question_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("questions.id"), nullable=False)
     question_order: Mapped[int] = mapped_column(SmallInteger, nullable=False)
-    selected_option_ids: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(UUID(as_uuid=True)), nullable=False, default=list)
+    selected_option_ids: Mapped[list[uuid.UUID] | None] = mapped_column(ARRAY(UUID(as_uuid=True)), nullable=True, default=list)
     is_correct: Mapped[bool | None] = mapped_column(Boolean)
     time_taken_seconds: Mapped[int | None] = mapped_column(SmallInteger)
+    writing_response: Mapped[str | None] = mapped_column(Text)
+    groq_feedback: Mapped[dict | None] = mapped_column(JSONB)
     answered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     session: Mapped["TestSession"] = relationship(back_populates="answers")

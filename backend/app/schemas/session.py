@@ -63,8 +63,9 @@ class SessionSummaryOut(BaseModel):
 
 class AnswerSubmit(BaseModel):
     question_id: uuid.UUID
-    selected_option_ids: list[uuid.UUID]
+    selected_option_ids: list[uuid.UUID] = []
     time_taken_seconds: int | None = None
+    writing_response: str | None = None
 
 
 class AnswerOut(BaseModel):
@@ -73,9 +74,11 @@ class AnswerOut(BaseModel):
     id: uuid.UUID
     question_id: uuid.UUID
     question_order: int
-    selected_option_ids: list[uuid.UUID]
+    selected_option_ids: list[uuid.UUID] | None
     is_correct: bool | None
     time_taken_seconds: int | None
+    writing_response: str | None = None
+    groq_feedback: dict | None = None
     answered_at: datetime
 
 
