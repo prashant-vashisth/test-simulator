@@ -58,7 +58,15 @@ export const useAuthStore = create<AuthState>()(
 
       registerChild: async ({ name, email, password, gradeId }) => {
         // Step 1: Create the Supabase auth account — this is the only hard requirement.
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        // emailRedirectTo ensures the confirmation link always points to the live app,
+        // overriding whatever Site URL is set in the Supabase dashboard.
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        });
         if (error) throw error;
 
         const userId = data.user?.id;
