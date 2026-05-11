@@ -5,11 +5,24 @@ import type { Child } from '../types';
 import { supabase } from '../lib/supabase';
 import api from '../services/api';
 
-// Parent password stored client-side — family app with no sensitive data.
 const PARENT_PASSWORD = 'JaiShriRam@01';
+const PENDING_PROFILE_KEY = 'ts-pending-profile';
+
+interface PendingProfile {
+  name: string;
+  grade_id: string;
+  user_id: string;
+  email: string;
+}
+
+async function createProfile(payload: PendingProfile, token?: string) {
+  await api.post('/api/v1/auth/create-profile', payload, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  localStorage.removeItem(PENDING_PROFILE_KEY);
+}
 
 interface AuthState {
-  // ── Parent flow (existing) ───────────────────────────────────────────────
   isAuthenticated: boolean;
   selectedChild: Child | null;
   login: (password: string) => boolean;
@@ -17,7 +30,6 @@ interface AuthState {
   selectChild: (child: Child) => void;
   clearChild: () => void;
 
-  // ── Child self-auth flow (new) ────────────────────────────────────────────
   childSession: Session | null;
   childProfile: Child | null;
   loginChild: (email: string, password: string) => Promise<void>;
@@ -30,57 +42,74 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      // ── Parent ─────────────────────────────────────────────────────────────
       isAuthenticated: false,
       selectedChild: null,
 
       login: (password: string) => {
-        if (password === PARENT_PASSWORD) {
-          set({ isAuthenticated: true });
-          return true;
-        }
+        if (password === PARENT_PASSWORD) { set({ isAuthenticated: true }); return true; }
         return false;
       },
-
       logout: () => set({ isAuthenticated: false, selectedChild: null }),
-
       selectChild: (child: Child) => set({ selectedChild: child }),
-
       clearChild: () => set({ selectedChild: null }),
 
-      // ── Child auth ─────────────────────────────────────────────────────────
       childSession: null,
       childProfile: null,
+
+      registerChild: async ({ name, email, password, gradeId }) => {
+        // Step 1: Create the Supabase auth account — this is the only hard requirement.
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+
+        const userId = data.user?.id;
+        if (!userId) throw new Error('Registration failed — no user ID returned.');
+
+        const payload: PendingProfile = { name, grade_id: gradeId, user_id: userId, email };
+
+        // Step 2: Try to create the DB profile. If the backend is unreachable (sleeping,
+        // CORS, wrong URL) we save the payload locally and retry on first login.
+        try {
+          await createProfile(payload, data.session?.access_token);
+        } catch {
+          localStorage.setItem(PENDING_PROFILE_KEY, JSON.stringify(payload));
+          // Don't throw — Supabase account exists, email verification can proceed.
+        }
+
+        if (data.session) set({ childSession: data.session });
+      },
 
       loginChild: async (email: string, password: string) => {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         set({ childSession: data.session });
 
-        const profileRes = await api.get<Child>('/api/v1/auth/me', {
-          headers: { Authorization: `Bearer ${data.session?.access_token}` },
-        });
-        set({ childProfile: profileRes.data });
-      },
+        const token = data.session?.access_token;
 
-      registerChild: async ({ name, email, password, gradeId }) => {
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
+        // Retry profile creation if it was deferred during registration.
+        const stored = localStorage.getItem(PENDING_PROFILE_KEY);
+        if (stored) {
+          try {
+            const pending: PendingProfile = JSON.parse(stored);
+            if (pending.user_id === data.user?.id) {
+              await createProfile(pending, token);
+            }
+          } catch { /* will retry next login */ }
+        }
 
-        const userId = data.user?.id;
-        if (!userId) throw new Error('Registration failed — no user ID returned');
-
-        // Create the children DB record immediately (idempotent)
-        await api.post('/api/v1/auth/create-profile', {
-          name,
-          grade_id: gradeId,
-          user_id: userId,
-          email,
-        });
-
-        // Store session if Supabase returned one (depends on email confirm settings)
-        if (data.session) {
-          set({ childSession: data.session });
+        try {
+          const res = await api.get<Child>('/api/v1/auth/me', {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          set({ childProfile: res.data });
+        } catch (err: unknown) {
+          const status = (err as { response?: { status?: number } })?.response?.status;
+          if (status === 404) {
+            throw new Error(
+              'Your account was created but your profile is still being set up. ' +
+              'Please try signing in again in a few seconds.'
+            );
+          }
+          throw err;
         }
       },
 

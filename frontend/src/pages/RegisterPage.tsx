@@ -33,9 +33,22 @@ export function RegisterPage() {
     setLoading(true);
     try {
       await registerChild({ name: name.trim(), email, password, gradeId });
+      // Always go to verification — profile creation failures are handled silently
       navigate('/verify-email', { state: { email } });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      const msg = err instanceof Error ? err.message : '';
+      // Map common Supabase error messages to readable ones
+      if (msg.toLowerCase().includes('user already registered') || msg.toLowerCase().includes('already been registered')) {
+        setError('An account with this email already exists. Please sign in instead.');
+      } else if (msg.toLowerCase().includes('invalid email')) {
+        setError('Please enter a valid email address.');
+      } else if (msg.toLowerCase().includes('password')) {
+        setError('Password is too weak. Please choose a stronger password (min. 6 characters).');
+      } else if (msg === '' || msg.toLowerCase().includes('network') || msg.toLowerCase().includes('fetch')) {
+        setError('Could not connect to the server. Please check your internet connection and try again.');
+      } else {
+        setError(msg || 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
