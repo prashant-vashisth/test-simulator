@@ -1,6 +1,7 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.database import get_db
@@ -80,28 +81,15 @@ async def get_session_questions(session_id: uuid.UUID, db: AsyncSession = Depend
 
     question_ids = [a.question_id for a in answer_rows]
     questions = (
-        await db.execute(select(Question).where(Question.id.in_(question_ids)))
-    ).scalars().unique().all()
-
-    options_map: dict[uuid.UUID, list[AnswerOption]] = {}
-    opts = (
         await db.execute(
-            select(AnswerOption)
-            .where(AnswerOption.question_id.in_(question_ids))
-            .order_by(AnswerOption.display_order)
+            select(Question)
+            .where(Question.id.in_(question_ids))
+            .options(selectinload(Question.options))
         )
     ).scalars().all()
-    for opt in opts:
-        options_map.setdefault(opt.question_id, []).append(opt)
 
     q_by_id = {q.id: q for q in questions}
-    result = []
-    for aid in question_ids:
-        q = q_by_id.get(aid)
-        if q:
-            q.options = options_map.get(q.id, [])
-            result.append(q)
-    return result
+    return [q_by_id[aid] for aid in question_ids if aid in q_by_id]
 
 
 @router.post("/{session_id}/answers", response_model=AnswerOut)

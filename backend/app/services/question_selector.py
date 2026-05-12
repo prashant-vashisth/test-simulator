@@ -14,11 +14,12 @@ import random
 import uuid
 from collections import defaultdict
 
-from sqlalchemy import select, func
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.catalogue import Topic
-from ..models.question import Question, AnswerOption
+from ..models.question import Question
 
 # How many questions of each difficulty to sample per topic slot
 DIFFICULTY_DISTRIBUTION: dict[str, dict[str, float]] = {
@@ -122,28 +123,14 @@ async def select_questions(
     )
     ordered_ids = ordered_ids[:num_questions]
 
-    # 5. Fetch full Question objects with options in a single query
+    # 5. Fetch full Question objects with options eagerly loaded
     result = await db.execute(
         select(Question)
         .where(Question.id.in_(ordered_ids))
-        .order_by(func.array_position(ordered_ids, Question.id))
+        .options(selectinload(Question.options))
     )
-    questions = result.scalars().unique().all()
+    questions_unordered = result.scalars().all()
 
-    # Eagerly load options (already done via relationship if selectin is configured,
-    # otherwise do a manual bulk fetch)
-    option_result = await db.execute(
-        select(AnswerOption)
-        .where(AnswerOption.question_id.in_(ordered_ids))
-        .order_by(AnswerOption.display_order)
-    )
-    options_by_q: dict[uuid.UUID, list[AnswerOption]] = defaultdict(list)
-    for opt in option_result.scalars().all():
-        options_by_q[opt.question_id].append(opt)
-
-    for q in questions:
-        q.options = options_by_q.get(q.id, [])
-
-    # Return in progressive difficulty order
+    # Sort in Python to the desired progressive-difficulty order
     id_order = {qid: idx for idx, qid in enumerate(ordered_ids)}
-    return sorted(questions, key=lambda q: id_order.get(q.id, 999))
+    return sorted(questions_unordered, key=lambda q: id_order.get(q.id, 999))
