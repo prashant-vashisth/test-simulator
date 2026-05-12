@@ -32,12 +32,10 @@ export function TestPage() {
   const [localInterruptions, setLocalInterruptions] = useState(0);
   const [hasEnteredFullscreen, setHasEnteredFullscreen] = useState(false);
 
-  // Redirect if no session
   useEffect(() => {
     if (!session) navigate('/select-test');
   }, [session, navigate]);
 
-  // Load questions
   const { isLoading, data: questionData } = useQuery({
     queryKey: ['session-questions', session?.id],
     queryFn: () => sessionService.getQuestions(session!.id),
@@ -52,7 +50,6 @@ export function TestPage() {
     }
   }, [questionData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fullscreen on mount
   useEffect(() => {
     if (!hasEnteredFullscreen) {
       enterFullscreen().then(() => setHasEnteredFullscreen(true));
@@ -117,10 +114,10 @@ export function TestPage() {
 
   if (!session || isLoading || questions.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center space-y-3">
           <LoadingSpinner size="lg" />
-          <p className="text-gray-500 font-medium">Loading your test…</p>
+          <p className="text-slate-500 font-medium">Loading your session…</p>
         </div>
       </div>
     );
@@ -130,7 +127,6 @@ export function TestPage() {
   const selectedIds = answers[currentQuestion?.id]?.selectedOptionIds ?? [];
   const answeredCount = Object.keys(answers).length;
   const isLastQuestion = currentIndex === questions.length - 1;
-  // Show TTS for Kindergarten through 2nd grade (level 0–2)
   const { config } = useTestStore();
   const showTTS = (config?.grade.level ?? 99) <= 2;
 
@@ -161,9 +157,9 @@ export function TestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col select-none">
+    <div className="min-h-screen bg-slate-50 flex flex-col select-none">
       {/* Top bar */}
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 sticky top-0 z-10">
+      <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 sticky top-0 z-10 shadow-sm">
         <div className="flex-1 max-w-lg">
           <ProgressBar
             current={currentIndex + 1}
@@ -176,7 +172,7 @@ export function TestPage() {
           {!isFullscreen && (
             <button
               onClick={enterFullscreen}
-              className="text-xs bg-yellow-100 text-yellow-800 px-2.5 py-1.5 rounded-lg font-medium hover:bg-yellow-200 transition"
+              className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1.5 rounded-lg font-semibold hover:bg-amber-100 transition"
             >
               ⛶ Fullscreen
             </button>
@@ -211,8 +207,8 @@ export function TestPage() {
         ) : null}
       </div>
 
-      {/* Question nav grid (compact) */}
-      <div className="bg-white border-t border-gray-100 px-4 py-2 overflow-x-auto">
+      {/* Question nav grid */}
+      <div className="bg-white border-t border-slate-100 px-4 py-2.5 overflow-x-auto">
         <div className="flex gap-1.5 items-center min-w-max mx-auto max-w-2xl">
           {questions.map((q, idx) => {
             const answered = !!answers[q.id];
@@ -221,12 +217,13 @@ export function TestPage() {
               <button
                 key={q.id}
                 onClick={() => goToIndex(idx)}
+                title={`Question ${idx + 1}`}
                 className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
                   isCurrent
-                    ? 'bg-brand-600 text-white ring-2 ring-brand-400 ring-offset-1'
+                    ? 'bg-brand-600 text-white ring-2 ring-brand-300 ring-offset-1'
                     : answered
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                 }`}
               >
                 {idx + 1}
@@ -237,7 +234,7 @@ export function TestPage() {
       </div>
 
       {/* Bottom nav */}
-      <div className="bg-white border-t border-gray-200 px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+      <div className="bg-white border-t border-slate-200 px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
         <Button
           variant="secondary"
           onClick={goToPrev}

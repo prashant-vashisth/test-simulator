@@ -39,7 +39,7 @@ export function QuestionCard({
     <div className="animate-fade-in space-y-5">
       {/* Passage / reading context */}
       {question.passage && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-gray-700 text-sm leading-relaxed max-h-52 overflow-y-auto font-body">
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-slate-700 text-sm leading-relaxed max-h-52 overflow-y-auto font-body">
           <p className="font-semibold text-amber-800 mb-2 text-xs uppercase tracking-wide">Read the passage below</p>
           {question.passage}
         </div>
@@ -48,7 +48,7 @@ export function QuestionCard({
       {/* Question header */}
       <div className="space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold text-gray-400">Q{questionNumber}</span>
+          <span className="text-xs font-bold text-slate-400">Q{questionNumber}</span>
           <span className={clsx('text-xs font-semibold px-2 py-0.5 rounded-full', DIFFICULTY_BADGE[question.difficulty])}>
             {question.difficulty}
           </span>
@@ -60,7 +60,7 @@ export function QuestionCard({
           {showTTS && <TextToSpeechButton text={ttsText} />}
         </div>
 
-        <p className="text-gray-900 text-lg font-semibold leading-relaxed font-display">
+        <p className="text-slate-900 text-lg font-semibold leading-relaxed font-display">
           {question.question_text}
         </p>
 
@@ -68,7 +68,7 @@ export function QuestionCard({
           <img
             src={question.image_url}
             alt="Question illustration"
-            className="rounded-xl max-h-56 object-contain border border-gray-200"
+            className="rounded-xl max-h-56 object-contain border border-slate-200"
           />
         )}
       </div>

@@ -42,15 +42,15 @@ export function WritingEditor({ prompt, passage, grade, onSubmit, disabled }: Wr
   return (
     <div className="space-y-4">
       {passage && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-gray-700 leading-relaxed">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-slate-700 leading-relaxed">
           <p className="font-semibold text-amber-800 mb-1 text-xs uppercase tracking-wide">Reading Passage</p>
           {passage}
         </div>
       )}
 
-      <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-        <p className="font-semibold text-indigo-800 text-sm mb-1">Writing Prompt</p>
-        <p className="text-gray-800 text-sm leading-relaxed">{prompt}</p>
+      <div className="bg-brand-50 border border-brand-200 rounded-xl p-4">
+        <p className="font-semibold text-brand-800 text-sm mb-1">Writing Prompt</p>
+        <p className="text-slate-800 text-sm leading-relaxed">{prompt}</p>
       </div>
 
       <div>
@@ -60,11 +60,11 @@ export function WritingEditor({ prompt, passage, grade, onSubmit, disabled }: Wr
           onChange={(e) => setText(e.target.value)}
           disabled={disabled}
           placeholder={`Write your response here… (aim for at least ${minWords} words)`}
-          className="w-full border-2 border-gray-200 focus:border-indigo-400 rounded-xl px-4 py-3 text-sm leading-relaxed resize-none focus:outline-none transition-colors disabled:bg-gray-50"
+          className="w-full border-2 border-slate-200 focus:border-brand-400 rounded-xl px-4 py-3 text-sm leading-relaxed resize-none focus:outline-none transition-colors disabled:bg-slate-50"
           style={{ minHeight: 180 }}
         />
         <div className="flex items-center justify-between mt-1 px-1">
-          <span className={`text-xs ${words >= minWords ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
+          <span className={`text-xs ${words >= minWords ? 'text-green-600 font-medium' : 'text-slate-400'}`}>
             {words} {words === 1 ? 'word' : 'words'}
             {words < minWords && ` (${minWords - words} more to go)`}
           </span>
@@ -77,7 +77,7 @@ export function WritingEditor({ prompt, passage, grade, onSubmit, disabled }: Wr
       <button
         onClick={() => canSubmit && onSubmit(text)}
         disabled={!canSubmit}
-        className="w-full py-3 rounded-xl font-semibold text-white transition-all bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full py-3 rounded-xl font-semibold text-white transition-all bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {disabled ? 'Submitted' : 'Submit Writing'}
       </button>

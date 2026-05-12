@@ -112,36 +112,48 @@ export function ResultsPage() {
     };
 
     return (
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="font-display text-2xl font-black text-gray-900">Review Answers</h2>
-            <button onClick={() => setShowReview(false)} className="text-sm text-gray-400 hover:text-gray-600">
-              ← Back to results
+      <div className="min-h-screen bg-slate-50">
+        {/* Review header */}
+        <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+          <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-lg font-bold text-slate-900">Review Answers</h2>
+              <p className="text-xs text-slate-400 mt-0.5">{reviewIndex + 1} of {result.questions.length} questions</p>
+            </div>
+            <button
+              onClick={() => setShowReview(false)}
+              className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-brand-600 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to results
             </button>
           </div>
+        </header>
 
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-4">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-4 pb-16">
+          <div className="bg-white rounded-2xl shadow-card border border-slate-100 p-6">
             {isWriting ? (
               <div className="space-y-4">
-                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-                  <p className="font-semibold text-indigo-800 text-sm mb-1">Writing Prompt</p>
-                  <p className="text-gray-800 text-sm leading-relaxed">{qr.question_text}</p>
+                <div className="bg-brand-50 border border-brand-200 rounded-xl p-4">
+                  <p className="font-semibold text-brand-800 text-xs uppercase tracking-wide mb-1.5">Writing Prompt</p>
+                  <p className="text-slate-800 text-sm leading-relaxed">{qr.question_text}</p>
                 </div>
                 {qr.writing_response && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Your Response</p>
-                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{qr.writing_response}</p>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Your Response</p>
+                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{qr.writing_response}</p>
                   </div>
                 )}
                 <WritingFeedback feedback={qr.groq_feedback as Parameters<typeof WritingFeedback>[0]['feedback']} />
               </div>
             ) : (
               <>
-                <div className="flex items-center gap-2 mb-4 text-sm font-medium">
+                <div className="flex items-center gap-2 mb-4 text-sm font-semibold">
                   {qr.is_correct
-                    ? <span className="text-green-600 bg-green-50 px-2.5 py-1 rounded-full">✓ Correct</span>
-                    : <span className="text-red-600 bg-red-50 px-2.5 py-1 rounded-full">✗ Incorrect</span>}
+                    ? <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">✓ Correct</span>
+                    : <span className="text-red-600 bg-red-50 border border-red-200 px-3 py-1 rounded-full">✗ Incorrect</span>}
                 </div>
                 <QuestionCard
                   question={asQuestion}
@@ -155,9 +167,17 @@ export function ResultsPage() {
             )}
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <Button variant="secondary" onClick={() => setReviewIndex(Math.max(0, reviewIndex - 1))} disabled={reviewIndex === 0}>← Prev</Button>
-            <span className="text-sm text-gray-500">{reviewIndex + 1} / {result.questions.length}</span>
+            <div className="flex gap-1">
+              {result.questions.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setReviewIndex(idx)}
+                  className={`w-2 h-2 rounded-full transition-all ${idx === reviewIndex ? 'bg-brand-600 scale-125' : 'bg-slate-300 hover:bg-slate-400'}`}
+                />
+              ))}
+            </div>
             <Button onClick={() => setReviewIndex(Math.min(result.questions.length - 1, reviewIndex + 1))} disabled={reviewIndex === result.questions.length - 1}>Next →</Button>
           </div>
         </div>
