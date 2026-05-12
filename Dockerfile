@@ -7,10 +7,14 @@ RUN npm ci
 
 COPY frontend/ ./
 
-# Vite bakes these in at build time — passed as build args from Render
+# Vite bakes these in at build time.
+# Render passes envVars as both build args and env vars for docker runtime.
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
 ARG VITE_API_BASE_URL=""
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 RUN npm run build
 

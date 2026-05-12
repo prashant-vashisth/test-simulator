@@ -1,15 +1,9 @@
 services:
-  # ── Single service: Python backend serves the React frontend as static files ──
-  # This eliminates CORS entirely since both run on the same origin.
   - type: web
     name: test-simulator-api
-    runtime: python
-    rootDir: .
-    buildCommand: >
-      pip install -r backend/requirements.txt &&
-      npm --prefix frontend ci &&
-      npm --prefix frontend run build
-    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     envVars:
       - key: DATABASE_URL
         sync: false
@@ -23,12 +17,10 @@ services:
         value: production
       - key: GROQ_API_KEY
         sync: false
-      # Vite bakes these into the JS bundle at build time
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
-      # Empty = same origin (no separate API URL needed)
       - key: VITE_API_BASE_URL
         value: ""
     healthCheckPath: /health
