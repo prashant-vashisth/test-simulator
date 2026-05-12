@@ -17,7 +17,8 @@ import { useState } from 'react';
 export function ResultsPage() {
   const navigate = useNavigate();
   const { session, config, reset } = useTestStore();
-  const { selectedChild, clearChild } = useAuthStore();
+  const { selectedChild, clearChild, childProfile, logoutChild } = useAuthStore();
+  const activeChild = selectedChild ?? childProfile;
   const [showReview, setShowReview] = useState(false);
   const [reviewIndex, setReviewIndex] = useState(0);
 
@@ -29,37 +30,37 @@ export function ResultsPage() {
   });
 
   const { data: sessions = [] } = useQuery({
-    queryKey: ['child-sessions', selectedChild?.id],
-    queryFn: () => childService.getSessions(selectedChild!.id),
-    enabled: !!selectedChild,
+    queryKey: ['child-sessions', activeChild?.id],
+    queryFn: () => childService.getSessions(activeChild!.id),
+    enabled: !!activeChild,
     staleTime: 30_000,
   });
 
   const { data: topicPerf = [] } = useQuery({
-    queryKey: ['topic-perf', selectedChild?.id, config?.subject.id, config?.grade.id],
+    queryKey: ['topic-perf', activeChild?.id, config?.subject.id, config?.grade.id],
     queryFn: () =>
       childService.getTopicPerformance(
-        selectedChild!.id,
+        activeChild!.id,
         config?.subject.id,
         config?.grade.id,
       ),
-    enabled: !!selectedChild,
+    enabled: !!activeChild,
     staleTime: 30_000,
   });
 
   const { data: recommendations = [] } = useQuery({
-    queryKey: ['recs', selectedChild?.id, config?.subject.id, config?.grade.id],
+    queryKey: ['recs', activeChild?.id, config?.subject.id, config?.grade.id],
     queryFn: () =>
       childService.getRecommendations(
-        selectedChild!.id,
+        activeChild!.id,
         config?.subject.id,
         config?.grade.id,
       ),
-    enabled: !!selectedChild,
+    enabled: !!activeChild,
     staleTime: 30_000,
   });
 
-  if (!session || !selectedChild) {
+  if (!session || !activeChild) {
     navigate('/');
     return null;
   }
@@ -81,8 +82,12 @@ export function ResultsPage() {
 
   const handleNewChild = () => {
     reset();
-    clearChild();
-    navigate('/');
+    if (selectedChild) {
+      clearChild();
+      navigate('/');
+    } else {
+      logoutChild().then(() => navigate('/'));
+    }
   };
 
   // Review mode
@@ -203,7 +208,7 @@ export function ResultsPage() {
       </header>
 
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6 pb-16">
-        <ScoreSummary result={result} childName={selectedChild.name} />
+        <ScoreSummary result={result} childName={activeChild.name} />
         <TopicPerformancePanel performances={topicPerf} recommendations={recommendations} />
 
         <button
@@ -219,7 +224,7 @@ export function ResultsPage() {
         <AttemptHistory sessions={sessions} />
 
         <div className="grid grid-cols-2 gap-3">
-          <Button variant="secondary" size="lg" onClick={handleNewChild}>Switch Student</Button>
+          <Button variant="secondary" size="lg" onClick={handleNewChild}>{selectedChild ? 'Switch Student' : 'Sign Out'}</Button>
           <Button size="lg" onClick={handleRetry}>Practice Again →</Button>
         </div>
       </div>

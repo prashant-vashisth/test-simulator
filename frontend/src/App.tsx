@@ -22,9 +22,10 @@ const queryClient = new QueryClient({
 });
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated, selectedChild } = useAuthStore();
-  if (!isAuthenticated) return <Navigate to="/" replace />;
-  if (!selectedChild) return <Navigate to="/" replace />;
+  const { isAuthenticated, selectedChild, childSession, childProfile } = useAuthStore();
+  const parentOk = isAuthenticated && !!selectedChild;
+  const childOk  = !!childSession && !!childProfile;
+  if (!parentOk && !childOk) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
