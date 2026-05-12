@@ -72,20 +72,52 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+const PENDING_KEY = 'ts-pending-profile';
+
 export function ChildDashboardPage() {
   const navigate = useNavigate();
   const { childProfile, childSession, logoutChild, setChildProfile } = useAuthStore();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [profileError, setProfileError] = useState('');
 
   useEffect(() => { if (!childSession) navigate('/child-login'); }, [childSession, navigate]);
 
   useEffect(() => {
-    if (childSession && !childProfile) {
-      import('../services/api').then(({ default: api }) =>
-        api.get('/api/v1/auth/me').then((r) => setChildProfile(r.data)).catch(() => {})
-      );
-    }
+    if (!childSession || childProfile) return;
+
+    const load = async () => {
+      try {
+        const res = await api.get('/api/v1/auth/me');
+        setChildProfile(res.data);
+        return;
+      } catch (err: unknown) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        // 404 = profile was never created (backend was sleeping during signup)
+        if (status !== 404) {
+          setProfileError('Could not reach the server. Please refresh the page.');
+          return;
+        }
+      }
+
+      // Profile missing — try to create it from locally stored signup data
+      const stored = localStorage.getItem(PENDING_KEY);
+      if (!stored) {
+        setProfileError('Your profile could not be found. Please sign out and register again.');
+        return;
+      }
+
+      try {
+        await api.post('/api/v1/auth/create-profile', JSON.parse(stored));
+        localStorage.removeItem(PENDING_KEY);
+        const res = await api.get('/api/v1/auth/me');
+        setChildProfile(res.data);
+      } catch {
+        setProfileError('We could not set up your profile. Please try signing out and signing in again.');
+      }
+    };
+
+    load();
   }, [childSession, childProfile, setChildProfile]);
 
   const gradeId = childProfile?.grade_id ?? '';
@@ -131,10 +163,42 @@ export function ChildDashboardPage() {
 
   if (!childProfile) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex items-center gap-2 text-slate-400 text-sm">
-          <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-          Loading your dashboard…
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-card p-8 max-w-sm w-full text-center">
+          {profileError ? (
+            <>
+              <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <p className="text-sm font-semibold text-slate-800 mb-1">Profile Setup Issue</p>
+              <p className="text-xs text-slate-500 leading-relaxed mb-5">{profileError}</p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => { setProfileError(''); window.location.reload(); }}
+                  className="w-full py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors"
+                >
+                  Retry
+                </button>
+                <button
+                  onClick={() => logoutChild().then(() => navigate('/'))}
+                  className="w-full py-2.5 rounded-lg border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors"
+                >
+                  Sign out
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <svg className="animate-spin w-7 h-7 text-brand-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              <p className="text-sm text-slate-500">Setting up your dashboard…</p>
+              <p className="text-xs text-slate-400 mt-1">This only takes a moment on first sign-in</p>
+            </>
+          )}
         </div>
       </div>
     );
