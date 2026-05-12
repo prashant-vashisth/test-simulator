@@ -21,7 +21,7 @@ export function TestPage() {
   const navigate = useNavigate();
   useAuthStore();
   const {
-    session, questions, currentIndex, answers,
+    session, questions, currentIndex, answers, config,
     setQuestions, recordAnswer, goToNext, goToPrev, goToIndex, startQuestionTimer, incrementInterruption,
   } = useTestStore();
 
@@ -127,7 +127,6 @@ export function TestPage() {
   const selectedIds = answers[currentQuestion?.id]?.selectedOptionIds ?? [];
   const answeredCount = Object.keys(answers).length;
   const isLastQuestion = currentIndex === questions.length - 1;
-  const { config } = useTestStore();
   const showTTS = (config?.grade.level ?? 99) <= 2;
 
   const handleToggleOption = (optionId: string) => {
