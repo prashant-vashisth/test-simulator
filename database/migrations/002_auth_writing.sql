@@ -5,7 +5,7 @@
 
 -- ── 1. Extend children table ─────────────────────────────────────────────────
 ALTER TABLE children
-    ADD COLUMN IF NOT EXISTS user_id  UUID UNIQUE,
+    ADD COLUMN IF NOT EXISTS user_id  TEXT UNIQUE,
     ADD COLUMN IF NOT EXISTS email    TEXT UNIQUE,
     ADD COLUMN IF NOT EXISTS grade_id UUID REFERENCES grades(id) ON DELETE SET NULL;
 
