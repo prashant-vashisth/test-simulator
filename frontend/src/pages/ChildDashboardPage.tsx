@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { childService } from '../services/childService';
 import { catalogueService } from '../services/catalogueService';
 import api from '../services/api';
-import type { Subject, TopicPerformance, SessionSummary } from '../types';
+import type { Child, Subject, TopicPerformance, SessionSummary } from '../types';
 
 const NWEA_MAP_ID = '22222222-0000-0000-0000-000000000001';
 
@@ -87,20 +87,43 @@ export function ChildDashboardPage() {
     if (!childSession || childProfile) return;
 
     const load = async () => {
+      // Retry up to 6 times (covers the ~30s Render cold-start window).
+      // Returns the profile data on success, null on 404, throws on timeout.
+      const fetchMe = async (): Promise<Child | null> => {
+        for (let attempt = 1; attempt <= 6; attempt++) {
+          try {
+            const res = await api.get<Child>('/api/v1/auth/me');
+            return res.data;
+          } catch (err: unknown) {
+            const status = (err as { response?: { status?: number } })?.response?.status;
+            if (status === 404) return null;
+            if (attempt === 6) throw err;
+            await new Promise((r) => setTimeout(r, 5000));
+          }
+        }
+        return null;
+      };
+
+      let profile: Child | null = null;
       try {
-        const res = await api.get('/api/v1/auth/me');
-        setChildProfile(res.data);
-        return;
+        profile = await fetchMe();
       } catch (err: unknown) {
         const status = (err as { response?: { status?: number } })?.response?.status;
-        // 404 = profile was never created (backend was sleeping during signup)
-        if (status !== 404) {
-          setProfileError('Could not reach the server. Please refresh the page.');
-          return;
+        if (status === 401) {
+          setProfileError('Session expired. Please sign out and sign in again.');
+        } else if (status === 403) {
+          setProfileError('Your account has been disabled. Please contact support.');
+        } else {
+          // Log to console so you can see the real error in browser DevTools
+          console.error('[Dashboard] profile fetch failed:', err);
+          setProfileError('Could not reach the server. Check the browser console (F12) for details, then retry.');
         }
+        return;
       }
 
-      // Profile missing — try to create it from locally stored signup data
+      if (profile) { setChildProfile(profile); return; }
+
+      // 404 path — profile was never saved (backend was sleeping during signup)
       const stored = localStorage.getItem(PENDING_KEY);
       if (!stored) {
         setProfileError('Your profile could not be found. Please sign out and register again.');
@@ -110,10 +133,10 @@ export function ChildDashboardPage() {
       try {
         await api.post('/api/v1/auth/create-profile', JSON.parse(stored));
         localStorage.removeItem(PENDING_KEY);
-        const res = await api.get('/api/v1/auth/me');
+        const res = await api.get<Child>('/api/v1/auth/me');
         setChildProfile(res.data);
       } catch {
-        setProfileError('We could not set up your profile. Please try signing out and signing in again.');
+        setProfileError('We could not set up your profile. Please try refreshing.');
       }
     };
 
@@ -195,8 +218,8 @@ export function ChildDashboardPage() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
               </svg>
-              <p className="text-sm text-slate-500">Setting up your dashboard…</p>
-              <p className="text-xs text-slate-400 mt-1">This only takes a moment on first sign-in</p>
+              <p className="text-sm text-slate-500">Loading your dashboard…</p>
+              <p className="text-xs text-slate-400 mt-1">Starting up the server — this can take up to 30 seconds on first load.</p>
             </>
           )}
         </div>
