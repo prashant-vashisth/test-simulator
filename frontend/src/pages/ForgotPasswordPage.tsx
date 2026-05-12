@@ -20,7 +20,15 @@ export function ForgotPasswordPage() {
       if (error) throw error;
       setSent(true);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      const msg = (err instanceof Error ? err.message : '').toLowerCase();
+      if (msg.includes('rate limit') || msg.includes('too many') || msg.includes('over_email_send_rate_limit')) {
+        setError('Too many reset emails sent recently. Please wait a few minutes before trying again.');
+      } else if (msg.includes('user not found') || msg.includes('invalid email')) {
+        // Don't reveal whether email exists — always show success to prevent enumeration
+        setSent(true);
+      } else {
+        setError('Something went wrong. Please try again in a few minutes.');
+      }
     } finally {
       setLoading(false);
     }

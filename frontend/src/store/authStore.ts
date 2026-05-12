@@ -87,13 +87,14 @@ export const useAuthStore = create<AuthState>()(
       },
 
       loginChild: async (email: string, password: string) => {
+        // Step 1: Supabase auth — the only hard requirement for login.
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         set({ childSession: data.session });
 
         const token = data.session?.access_token;
 
-        // Retry profile creation if it was deferred during registration.
+        // Step 2: Retry deferred profile creation if backend was unreachable at signup.
         const stored = localStorage.getItem(PENDING_PROFILE_KEY);
         if (stored) {
           try {
@@ -104,20 +105,15 @@ export const useAuthStore = create<AuthState>()(
           } catch { /* will retry next login */ }
         }
 
+        // Step 3: Fetch profile — non-blocking. If the backend is unreachable or
+        // sleeping, we still navigate to the dashboard and retry loading the profile there.
         try {
           const res = await api.get<Child>('/api/v1/auth/me', {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           });
           set({ childProfile: res.data });
-        } catch (err: unknown) {
-          const status = (err as { response?: { status?: number } })?.response?.status;
-          if (status === 404) {
-            throw new Error(
-              'Your account was created but your profile is still being set up. ' +
-              'Please try signing in again in a few seconds.'
-            );
-          }
-          throw err;
+        } catch {
+          // Profile will be loaded by the dashboard once backend wakes up.
         }
       },
 

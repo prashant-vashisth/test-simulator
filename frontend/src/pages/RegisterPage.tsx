@@ -44,7 +44,9 @@ export function RegisterPage() {
         setError('Please enter a valid email address.');
       } else if (msg.toLowerCase().includes('password')) {
         setError('Password is too weak. Please choose a stronger password (min. 6 characters).');
-      } else if (msg === '' || msg.toLowerCase().includes('network') || msg.toLowerCase().includes('fetch')) {
+      } else if (msg.includes('rate limit') || msg.includes('too many') || msg.includes('over_email_send_rate_limit')) {
+        setError('Too many sign-up attempts. Please wait a few minutes before trying again.');
+      } else if (msg === '' || msg.includes('network') || msg.includes('fetch')) {
         setError('Could not connect to the server. Please check your internet connection and try again.');
       } else {
         setError(msg || 'Registration failed. Please try again.');
