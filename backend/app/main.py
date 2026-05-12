@@ -26,24 +26,34 @@ async def health() -> JSONResponse:
 
 
 # ── Serve React frontend ──────────────────────────────────────────────────────
-# Path works both locally and on Render regardless of rootDir
-FRONTEND_DIST = Path(__file__).resolve().parents[3] / "frontend" / "dist"
+def _find_frontend_dist() -> Path:
+    """
+    Walk up from this file looking for frontend/dist.
+    Works in Docker (/app/frontend/dist) and Render native (/opt/.../frontend/dist).
+    """
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        candidate = parent / "frontend" / "dist"
+        if candidate.exists():
+            return candidate
+    return here.parent / "frontend" / "dist"   # fallback (won't exist)
 
 
-@app.on_event("startup")
-async def _check_frontend():
-    if FRONTEND_DIST.exists():
-        app.mount(
-            "/assets",
-            StaticFiles(directory=str(FRONTEND_DIST / "assets")),
-            name="assets",
-        )
+FRONTEND_DIST = _find_frontend_dist()
+
+if FRONTEND_DIST.exists():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=str(FRONTEND_DIST / "assets")),
+        name="assets",
+    )
 
 
 @app.get("/{full_path:path}", include_in_schema=False)
 async def serve_spa(full_path: str) -> FileResponse:
-    """Catch-all: serve the React SPA for any non-API route."""
-    requested = FRONTEND_DIST / full_path
-    if requested.is_file():
-        return FileResponse(str(requested))
+    """Catch-all: serve a file from dist if it exists, otherwise index.html."""
+    if full_path:
+        requested = FRONTEND_DIST / full_path
+        if requested.is_file():
+            return FileResponse(str(requested))
     return FileResponse(str(FRONTEND_DIST / "index.html"))
