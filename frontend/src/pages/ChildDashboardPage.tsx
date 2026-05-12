@@ -74,12 +74,88 @@ function StatusBadge({ status }: { status: string }) {
 
 const PENDING_KEY = 'ts-pending-profile';
 
+function ProfileSetupForm({ session, name, setName, gradeId, setGradeId, loading, error, onSubmit, onSignOut }: {
+  session: unknown;
+  name: string; setName: (v: string) => void;
+  gradeId: string; setGradeId: (v: string) => void;
+  loading: boolean; error: string;
+  onSubmit: () => void;
+  onSignOut: () => void;
+}) {
+  const { data: grades = [] } = useQuery({
+    queryKey: ['grades'],
+    queryFn: () => catalogueService.getGrades(),
+    staleTime: 10 * 60 * 1000,
+  });
+  void session;
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-card p-8 max-w-sm w-full">
+        <div className="text-center mb-6">
+          <div className="w-12 h-12 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg className="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">Complete Your Profile</h2>
+          <p className="text-xs text-slate-500 mt-1">Just two details to get you started</p>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Your Name</label>
+            <input
+              type="text" value={name} onChange={(e) => setName(e.target.value)}
+              placeholder="First Last" autoFocus
+              className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Grade Level</label>
+            <select
+              value={gradeId} onChange={(e) => setGradeId(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+            >
+              <option value="">Select your grade…</option>
+              {grades.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+          </div>
+
+          {error && (
+            <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{error}</p>
+          )}
+
+          <button
+            onClick={onSubmit} disabled={loading}
+            className="w-full py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+          >
+            {loading
+              ? <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Saving…</>
+              : 'Get Started →'
+            }
+          </button>
+          <button onClick={onSignOut} className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors">
+            Sign out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ChildDashboardPage() {
   const navigate = useNavigate();
   const { childProfile, childSession, logoutChild, setChildProfile } = useAuthStore();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [profileError, setProfileError] = useState('');
+  const [needsSetup, setNeedsSetup] = useState(false);
+  // Profile setup form state
+  const [setupName, setSetupName] = useState('');
+  const [setupGradeId, setSetupGradeId] = useState('');
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupError, setSetupError] = useState('');
 
   useEffect(() => { if (!childSession) navigate('/child-login'); }, [childSession, navigate]);
 
@@ -125,19 +201,19 @@ export function ChildDashboardPage() {
 
       // 404 path — profile was never saved (backend was sleeping during signup)
       const stored = localStorage.getItem(PENDING_KEY);
-      if (!stored) {
-        setProfileError('Your profile could not be found. Please sign out and register again.');
-        return;
+      if (stored) {
+        try {
+          await api.post('/api/v1/auth/create-profile', JSON.parse(stored));
+          localStorage.removeItem(PENDING_KEY);
+          const res = await api.get<Child>('/api/v1/auth/me');
+          setChildProfile(res.data);
+          return;
+        } catch {
+          // Fall through to manual setup form
+        }
       }
-
-      try {
-        await api.post('/api/v1/auth/create-profile', JSON.parse(stored));
-        localStorage.removeItem(PENDING_KEY);
-        const res = await api.get<Child>('/api/v1/auth/me');
-        setChildProfile(res.data);
-      } catch {
-        setProfileError('We could not set up your profile. Please try refreshing.');
-      }
+      // No pending data or creation failed — show profile setup form
+      setNeedsSetup(true);
     };
 
     load();
@@ -185,6 +261,40 @@ export function ChildDashboardPage() {
     : null;
 
   if (!childProfile) {
+    // ── Profile setup form (no pending data in localStorage) ─────────────────
+    if (needsSetup) {
+      return (
+        <ProfileSetupForm
+          session={childSession}
+          name={setupName} setName={setSetupName}
+          gradeId={setupGradeId} setGradeId={setSetupGradeId}
+          loading={setupLoading} error={setupError}
+          onSubmit={async () => {
+            setSetupError('');
+            if (!setupName.trim()) return setSetupError('Please enter your name.');
+            if (!setupGradeId) return setSetupError('Please select your grade.');
+            setSetupLoading(true);
+            try {
+              const userId = (childSession as { user?: { id?: string } })?.user?.id ?? '';
+              const email = (childSession as { user?: { email?: string } })?.user?.email ?? '';
+              await api.post('/api/v1/auth/create-profile', {
+                name: setupName.trim(),
+                grade_id: setupGradeId,
+                user_id: userId,
+                email,
+              });
+              const res = await api.get<Child>('/api/v1/auth/me');
+              setChildProfile(res.data);
+            } catch {
+              setSetupError('Could not save your profile. Please try again.');
+              setSetupLoading(false);
+            }
+          }}
+          onSignOut={() => logoutChild().then(() => navigate('/'))}
+        />
+      );
+    }
+
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="bg-white border border-slate-200 rounded-2xl shadow-card p-8 max-w-sm w-full text-center">
