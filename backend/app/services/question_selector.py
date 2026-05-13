@@ -39,7 +39,25 @@ async def select_questions(
     grade_id: uuid.UUID,
     difficulty: str,
     num_questions: int,
+    topic_id: uuid.UUID | None = None,
 ) -> list[Question]:
+    # ── Topic-specific fast-path ─────────────────────────────────────────────
+    # When a topic is selected, return ALL active questions for that topic
+    # ordered easy → medium → hard (ignoring num_questions and difficulty filters).
+    if topic_id is not None:
+        result = await db.execute(
+            select(Question)
+            .where(
+                Question.topic_id == topic_id,
+                Question.test_type_id == test_type_id,
+                Question.grade_id == grade_id,
+                Question.is_active.is_(True),
+            )
+            .options(selectinload(Question.options))
+        )
+        questions = result.scalars().all()
+        return sorted(questions, key=lambda q: DIFFICULTY_ORDER.get(q.difficulty, 1))
+
     # 1. Fetch all topics for this subject + grade
     topic_rows = (
         await db.execute(

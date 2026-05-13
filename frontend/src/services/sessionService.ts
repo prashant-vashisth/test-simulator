@@ -9,6 +9,7 @@ export const sessionService = {
     grade_id: string;
     difficulty: string;
     num_questions: number;
+    topic_id?: string;
   }) => api.post<TestSession>('/api/v1/sessions', payload).then(r => r.data),
 
   getSession: (sessionId: string) =>

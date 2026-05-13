@@ -134,6 +134,8 @@ export function TestSelectionPage() {
   const [gradeId,           setGradeId          ] = useState('');
   const [activeTab,         setActiveTab         ] = useState<TabItem | null>(null);
   const [olympiadSubjectId, setOlympiadSubjectId ] = useState('');
+  const [selectedTopicId,   setSelectedTopicId  ] = useState('');
+  const [selectedTopicName, setSelectedTopicName] = useState('');
   const [startError,        setStartError        ] = useState('');
 
   // ── Queries ────────────────────────────────────────────────────────────────
@@ -241,6 +243,7 @@ export function TestSelectionPage() {
       grade_id:      gradeId,
       difficulty:    DEFAULT_DIFFICULTY,
       num_questions: DEFAULT_NUM_Q,
+      ...(selectedTopicId ? { topic_id: selectedTopicId } : {}),
     });
   };
 
@@ -285,7 +288,7 @@ export function TestSelectionPage() {
         <GradeSidebar
           grades={grades}
           selectedId={gradeId}
-          onSelect={(id) => { setGradeId(id); setStartError(''); }}
+          onSelect={(id) => { setGradeId(id); setSelectedTopicId(''); setSelectedTopicName(''); setStartError(''); }}
         />
 
         {/* Right pane */}
@@ -300,7 +303,7 @@ export function TestSelectionPage() {
                 return (
                   <button
                     key={tab.kind === 'nwea' ? tab.subjectId : tab.testTypeId}
-                    onClick={() => { setActiveTab(tab); setOlympiadSubjectId(''); setStartError(''); }}
+                    onClick={() => { setActiveTab(tab); setOlympiadSubjectId(''); setSelectedTopicId(''); setSelectedTopicName(''); setStartError(''); }}
                     className={`shrink-0 px-5 py-4 text-sm font-semibold border-b-[3px] transition-all whitespace-nowrap ${
                       isActive
                         ? `${colors.tabBorder} ${colors.tabActive}`
@@ -360,19 +363,34 @@ export function TestSelectionPage() {
 
                   {topics.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {topics.map((t) => (
-                        <div
-                          key={t.id}
-                          className={`p-3.5 rounded-xl border text-sm font-medium leading-snug ${cfg.topicBg} ${cfg.topicText} ${cfg.topicBorder}`}
-                        >
-                          {t.name}
-                          {t.description && (
-                            <p className="text-xs opacity-60 mt-1 font-normal leading-snug line-clamp-2">
-                              {t.description}
-                            </p>
-                          )}
-                        </div>
-                      ))}
+                      {topics.map((t) => {
+                        const isSelected = selectedTopicId === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            onClick={() => {
+                              setSelectedTopicId(isSelected ? '' : t.id);
+                              setSelectedTopicName(isSelected ? '' : t.name);
+                              setStartError('');
+                            }}
+                            className={`p-3.5 rounded-xl border-2 text-left text-sm font-semibold leading-snug transition-all ${
+                              isSelected
+                                ? `${cfg.topicBorder} ${cfg.topicBg} ${cfg.topicText} shadow-sm ring-2 ring-offset-1 ${cfg.topicBorder}`
+                                : `border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50`
+                            }`}
+                          >
+                            {isSelected && (
+                              <span className={`inline-block w-2 h-2 rounded-full mr-1.5 mb-0.5 align-middle ${cfg.topicBorder.replace('border-', 'bg-')}`} />
+                            )}
+                            {t.name}
+                            {t.description && (
+                              <p className={`text-xs mt-1 font-normal leading-snug line-clamp-2 ${isSelected ? 'opacity-70' : 'text-slate-400'}`}>
+                                {t.description}
+                              </p>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center">
@@ -422,13 +440,18 @@ export function TestSelectionPage() {
                     </>
                   ) : (
                     <>
-                      Start Practice Session
+                      {selectedTopicId ? `Start: ${selectedTopicName}` : 'Start Practice Session'}
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                       </svg>
                     </>
                   )}
                 </button>
+                {canStart && !selectedTopicId && (
+                  <p className="text-center text-xs text-slate-400">
+                    Select a topic above for a focused 15-question test, or start now for a mixed session.
+                  </p>
+                )}
                 {!canStart && (
                   <p className="text-center text-xs text-slate-400">
                     {!gradeId

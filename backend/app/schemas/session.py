@@ -10,6 +10,7 @@ class SessionCreate(BaseModel):
     grade_id: uuid.UUID
     difficulty: str
     num_questions: int
+    topic_id: uuid.UUID | None = None  # when set, all questions from that topic are used
 
     @field_validator("difficulty")
     @classmethod

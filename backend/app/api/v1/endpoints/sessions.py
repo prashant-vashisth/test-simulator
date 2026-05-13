@@ -26,6 +26,7 @@ async def create_session(body: SessionCreate, db: AsyncSession = Depends(get_db)
         grade_id=body.grade_id,
         difficulty=body.difficulty,
         num_questions=body.num_questions,
+        topic_id=body.topic_id,
     )
     if not questions:
         raise HTTPException(
