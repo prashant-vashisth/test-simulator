@@ -12,7 +12,9 @@ const NWEA_ID  = '22222222-0000-0000-0000-000000000001';
 const MATH_OLY = '22222222-0000-0000-0000-000000000002';
 const SCI_OLY  = '22222222-0000-0000-0000-000000000003';
 
-type Difficulty = 'easy' | 'medium' | 'hard';
+// Difficulty and question count are fixed — not exposed to the user
+const DEFAULT_DIFFICULTY = 'medium' as const;
+const DEFAULT_NUM_Q      = 15;
 
 type TabItem =
   | { kind: 'nwea';     subjectId: string; testTypeId: string; name: string; code: string }
@@ -68,14 +70,6 @@ const SUBJECT_CONFIG: Record<string, {
     subjectPillActive:'border-teal-500 bg-teal-600 text-white',
   },
 };
-
-const DIFF_OPTS: { value: Difficulty; label: string; desc: string; inactive: string; active: string }[] = [
-  { value: 'easy',   label: 'Foundation', desc: 'Core concepts', inactive: 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:bg-emerald-50', active: 'border-emerald-500 bg-emerald-500 text-white' },
-  { value: 'medium', label: 'Standard',   desc: 'Grade level',   inactive: 'border-slate-200 bg-white text-slate-600 hover:border-amber-300 hover:bg-amber-50',     active: 'border-amber-500 bg-amber-500 text-white'   },
-  { value: 'hard',   label: 'Advanced',   desc: 'Challenge',     inactive: 'border-slate-200 bg-white text-slate-600 hover:border-rose-300 hover:bg-rose-50',        active: 'border-rose-500 bg-rose-500 text-white'     },
-];
-
-const Q_COUNTS = [10, 20, 30, 42, 50];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function ordinal(n: number): string {
@@ -140,8 +134,6 @@ export function TestSelectionPage() {
   const [gradeId,           setGradeId          ] = useState('');
   const [activeTab,         setActiveTab         ] = useState<TabItem | null>(null);
   const [olympiadSubjectId, setOlympiadSubjectId ] = useState('');
-  const [difficulty,        setDifficulty        ] = useState<Difficulty>('medium');
-  const [numQ,              setNumQ              ] = useState(20);
   const [startError,        setStartError        ] = useState('');
 
   // ── Queries ────────────────────────────────────────────────────────────────
@@ -237,8 +229,8 @@ export function TestSelectionPage() {
         testType,
         subject: subject ?? { id: effectiveSubjectId, name: '', code: '', test_type_id: effectiveTestTypeId, description: null, display_order: 0 },
         grade,
-        difficulty,
-        numQuestions: numQ,
+        difficulty: DEFAULT_DIFFICULTY,
+        numQuestions: DEFAULT_NUM_Q,
       });
     }
 
@@ -247,8 +239,8 @@ export function TestSelectionPage() {
       test_type_id:  effectiveTestTypeId,
       subject_id:    effectiveSubjectId,
       grade_id:      gradeId,
-      difficulty,
-      num_questions: numQ,
+      difficulty:    DEFAULT_DIFFICULTY,
+      num_questions: DEFAULT_NUM_Q,
     });
   };
 
@@ -405,52 +397,8 @@ export function TestSelectionPage() {
                 </div>
               )}
 
-              {/* Practice Settings card */}
-              <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
-                <div>
-                  <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-                    Difficulty Level
-                  </h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    {DIFF_OPTS.map((d) => (
-                      <button
-                        key={d.value}
-                        onClick={() => setDifficulty(d.value)}
-                        className={`p-3.5 rounded-xl border-2 text-left transition-all ${
-                          difficulty === d.value ? d.active : d.inactive
-                        }`}
-                      >
-                        <div className="font-bold text-sm">{d.label}</div>
-                        <div className="text-xs opacity-70 mt-0.5">{d.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-                    Number of Questions
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {Q_COUNTS.map((n) => (
-                      <button
-                        key={n}
-                        onClick={() => setNumQ(n)}
-                        className={`w-14 h-10 rounded-xl text-sm font-bold border-2 transition-all ${
-                          numQ === n
-                            ? 'bg-slate-900 text-white border-slate-900'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
-                        }`}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                    <span className="text-xs text-slate-400 ml-1">
-                      ~{Math.round(numQ * 1.5)} min
-                    </span>
-                  </div>
-                </div>
-
+              {/* Start button */}
+              <div className="space-y-3">
                 {startError && (
                   <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
                     <svg className="w-4 h-4 text-rose-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -459,7 +407,6 @@ export function TestSelectionPage() {
                     <p className="text-sm text-rose-700">{startError}</p>
                   </div>
                 )}
-
                 <button
                   onClick={handleStart}
                   disabled={!canStart || createSession.isPending}
@@ -482,7 +429,6 @@ export function TestSelectionPage() {
                     </>
                   )}
                 </button>
-
                 {!canStart && (
                   <p className="text-center text-xs text-slate-400">
                     {!gradeId
@@ -494,7 +440,7 @@ export function TestSelectionPage() {
                       : ''}
                   </p>
                 )}
-              </section>
+              </div>
 
             </div>
           </div>
