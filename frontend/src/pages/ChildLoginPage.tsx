@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { AuthLayout } from '../components/auth/AuthLayout';
 
 export function ChildLoginPage() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const location  = useLocation();
   const { loginChild } = useAuthStore();
+
+  const justRegistered = !!(location.state as { registered?: boolean })?.registered;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,7 +26,7 @@ export function ChildLoginPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Login failed';
       if (msg.toLowerCase().includes('email not confirmed')) {
-        setError('Please verify your email first. Check your inbox for the confirmation link.');
+        setError('Account not yet activated. Please contact the administrator to enable your account.');
       } else if (msg.toLowerCase().includes('invalid login') || msg.toLowerCase().includes('invalid credentials')) {
         setError('Incorrect email or password. Please try again.');
       } else {
@@ -43,6 +46,13 @@ export function ChildLoginPage() {
         <h2 className="text-2xl font-bold text-slate-900">Sign in to AcademIQ</h2>
         <p className="text-slate-500 text-sm mt-1">Enter your credentials to access your dashboard</p>
       </div>
+
+      {justRegistered && (
+        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5 mb-4">
+          <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+          <p className="text-sm text-emerald-700 font-medium">Account created! Sign in to get started.</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

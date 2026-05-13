@@ -33,8 +33,10 @@ export function RegisterPage() {
     setLoading(true);
     try {
       await registerChild({ name: name.trim(), email, password, gradeId });
-      // Always go to verification — profile creation failures are handled silently
-      navigate('/verify-email', { state: { email } });
+      // Email verification is temporarily disabled — go straight to sign-in.
+      // To re-enable: turn "Confirm email" back on in Supabase Auth settings and
+      // restore the navigate('/verify-email', { state: { email } }) call below.
+      navigate('/child-login', { state: { registered: true } });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '';
       // Map common Supabase error messages to readable ones
